@@ -77,6 +77,9 @@ services:
       MINIO_BUCKET: kostify
       MINIO_SECURE: "false"
       MINIO_PUBLIC_URL: http://localhost:9000
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      MAIL_FROM: no-reply@kostify.test
     ports:
       - "8080:8080"
     depends_on:

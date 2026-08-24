@@ -16,6 +16,7 @@ import (
 	"github.com/dzulfikarq/kostify/backend/internal/interfaces/http/handler"
 	"github.com/dzulfikarq/kostify/backend/internal/interfaces/http/middleware"
 	"github.com/dzulfikarq/kostify/backend/internal/pkg/jwt"
+	mailerpkg "github.com/dzulfikarq/kostify/backend/internal/pkg/mailer"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,16 +29,22 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, storage dom
 	userRepo := infrapostgres.NewUserRepo(db)
 	propertyRepo := infrapostgres.NewPropertyRepo(db)
 	roomRepo := infrapostgres.NewRoomRepo(db)
+	bookingRepo := infrapostgres.NewBookingRepo(db)
 	tokenStore := infraredis.NewTokenStore(rdb, cfg.RefreshTokenTTL)
 	signer := jwt.NewSigner([]byte(cfg.JWTSecret))
 
 	authUC := application.NewAuthUsecase(userRepo, tokenStore, signer, cfg.AccessTokenTTL, cfg.BcryptCost)
 	propertyUC := application.NewPropertyUsecase(propertyRepo, roomRepo, storage)
 	roomUC := application.NewRoomUsecase(roomRepo, propertyRepo)
+	notificationRepo := infrapostgres.NewNotificationRepo(db)
+	mailer := mailerpkg.New(cfg.SMTPHost, cfg.SMTPPort, cfg.MailFrom)
+	bookingUC := application.NewBookingUsecase(bookingRepo, notificationRepo, userRepo, mailer)
 
 	authH := handler.NewAuthHandler(authUC, cfg)
 	propertyH := handler.NewPropertyHandler(propertyUC)
 	roomH := handler.NewRoomHandler(roomUC)
+	bookingH := handler.NewBookingHandler(bookingUC)
+	notifikasiH := handler.NewNotificationHandler(notificationRepo)
 
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
@@ -115,6 +122,30 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, storage dom
 		admin.POST("/properties/:id/approve", propertyH.Approve)
 		admin.POST("/properties/:id/reject", propertyH.Reject)
 		admin.DELETE("/properties/:id", propertyH.AdminDelete)
+	}
+
+	tenant := v1.Group("", middleware.Auth(signer), middleware.RequireRole(domain.RoleTenant))
+	{
+		tenant.POST("/bookings", bookingH.Create)
+		tenant.GET("/bookings/me", bookingH.ListMine)
+		tenant.PUT("/bookings/:id/checkin", bookingH.CheckIn)
+		tenant.PUT("/bookings/:id/checkout", bookingH.CheckOut)
+		tenant.PUT("/bookings/:id/cancel", bookingH.Cancel)
+	}
+
+	bookingOwner := v1.Group("", middleware.Auth(signer), middleware.RequireRole(domain.RoleOwner))
+	{
+		bookingOwner.GET("/bookings/owner", bookingH.ListOwner)
+		bookingOwner.PUT("/bookings/:id/approve", bookingH.Approve)
+		bookingOwner.PUT("/bookings/:id/reject", bookingH.Reject)
+		bookingOwner.PUT("/bookings/:id/confirm", bookingH.Confirm)
+	}
+
+	authedNotif := v1.Group("", middleware.Auth(signer))
+	{
+		authedNotif.GET("/notifications", notifikasiH.List)
+		authedNotif.PUT("/notifications/read-all", notifikasiH.MarkAllRead)
+		authedNotif.PUT("/notifications/:id/read", notifikasiH.MarkRead)
 	}
 
 	return r

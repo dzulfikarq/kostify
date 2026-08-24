@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"io"
+	"time"
 )
 
 type UserRepository interface {
@@ -22,6 +23,8 @@ type ListParams struct {
 	Limit  int
 	Search string
 	Status *string
+	Sort   string
+	Order  string
 }
 
 type PropertyFilter struct {
@@ -31,8 +34,6 @@ type PropertyFilter struct {
 	MaxPrice   *int
 	MinRating  *float64
 	Facilities []string
-	Sort       string
-	Order      string
 }
 
 type PropertyWithStats struct {
@@ -73,4 +74,47 @@ type ObjectStorage interface {
 	Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error
 	Delete(ctx context.Context, key string) error
 	PublicURL(key string) string
+}
+
+type BookingTransition struct {
+	BookingID    string
+	ActorID      string
+	From         BookingStatus
+	To           BookingStatus
+	RoomTo       *RoomStatus
+	StartDate    *time.Time
+	SetCheckedIn bool
+	SetCheckedOut bool
+	CancelReason *string
+	Note         *string
+
+	NotifyUserID string
+	NotifyTitle  string
+	NotifyBody   string
+	EmailTo      *string
+	EmailSubject string
+}
+
+type ExpiredBooking struct {
+	ID       string
+	TenantID string
+	OwnerID  string
+	RoomID   string
+}
+
+type BookingRepository interface {
+	Create(ctx context.Context, b *Booking, actorID string) error
+	FindByID(ctx context.Context, id string) (*BookingWithRefs, error)
+	ListByTenant(ctx context.Context, tenantID string, f ListParams) ([]BookingWithRefs, int64, error)
+	ListByOwner(ctx context.Context, ownerID string, f ListParams, propertyID string) ([]BookingWithRefs, int64, error)
+	Transition(ctx context.Context, t BookingTransition) (*Booking, error)
+	ExpireDue(ctx context.Context, limit int) ([]ExpiredBooking, error)
+	FinalizeExpiry(ctx context.Context, e ExpiredBooking) error
+}
+
+type NotificationRepository interface {
+	Create(ctx context.Context, n *Notification) error
+	List(ctx context.Context, userID string, f ListParams, isRead *bool) ([]Notification, int64, error)
+	MarkRead(ctx context.Context, id, userID string) (bool, error)
+	MarkAllRead(ctx context.Context, userID string) (int64, error)
 }

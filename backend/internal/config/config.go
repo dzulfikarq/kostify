@@ -32,6 +32,9 @@ type Config struct {
 	MinioBucket     string
 	MinioSecure     bool
 	MinioPublicURL  string
+	SMTPHost        string
+	SMTPPort        string
+	MailFrom        string
 }
 
 func Load() (*Config, error) {
@@ -59,6 +62,9 @@ func Load() (*Config, error) {
 		MinioBucket:     os.Getenv("MINIO_BUCKET"),
 		MinioSecure:     envBool("MINIO_SECURE", false),
 		MinioPublicURL:  os.Getenv("MINIO_PUBLIC_URL"),
+		SMTPHost:        env("SMTP_HOST", "localhost"),
+		SMTPPort:        env("SMTP_PORT", "1025"),
+		MailFrom:        env("MAIL_FROM", "no-reply@kostify.test"),
 	}
 	if cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET wajib diisi")

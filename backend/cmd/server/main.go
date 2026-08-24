@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dzulfikarq/kostify/backend/internal/application"
 	"github.com/dzulfikarq/kostify/backend/internal/config"
 	"github.com/dzulfikarq/kostify/backend/internal/domain"
 	inframinio "github.com/dzulfikarq/kostify/backend/internal/infrastructure/minio"
@@ -91,6 +92,10 @@ func main() {
 		Handler:           httpapi.NewRouter(cfg, db, rdb, storage),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+
+	bookingRepo := infrapostgres.NewBookingRepo(db)
+	expiryWorker := application.NewExpiryWorker(bookingRepo)
+	go expiryWorker.Run(ctx, 60*time.Second)
 
 	go func() {
 		slog.Info("server berjalan", "port", cfg.AppPort, "env", cfg.AppEnv)
