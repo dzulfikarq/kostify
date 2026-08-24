@@ -22,7 +22,8 @@ export function TenantBookingsPage() {
     onError: (e) => setError(errMessage(e)),
   })
 
-  if (isLoading) return <div className="mx-auto max-w-5xl px-4 py-6 text-slate-500">Memuat…</div>
+  if (isLoading)
+    return <div className="mx-auto max-w-5xl px-4 py-6 text-slate-500">Memuat…</div>
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
@@ -35,7 +36,10 @@ export function TenantBookingsPage() {
       )}
       <div className="space-y-3">
         {data?.data.map((b) => (
-          <BookingCard key={b.id} b={b} role="tenant" onAct={(a) => act.mutate({ id: b.id, action: a })} busy={act.isPending} />
+          <div key={b.id} className="space-y-2">
+            <BookingCard b={b} role="tenant" onAct={(a) => act.mutate({ id: b.id, action: a })} busy={act.isPending} />
+            {b.status === 'completed' && <ReviewForm bookingId={b.id} />}
+          </div>
         ))}
       </div>
     </div>
@@ -86,7 +90,7 @@ export function BookingCard({
         <StatusBadge status={b.status} />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-start gap-2">
         {role === 'owner' && b.status === 'pending' && (
           <>
             <button onClick={() => onAct('approve')} disabled={busy}
@@ -131,6 +135,65 @@ export function BookingCard({
             Check-out
           </button>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ReviewForm({ bookingId }: { bookingId: string }) {
+  const qc = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  const create = useMutation({
+    mutationFn: async () => await api.post(`/bookings/${bookingId}/reviews`, { rating, comment }),
+    onSuccess: () => {
+      setDone(true)
+      setOpen(false)
+      qc.invalidateQueries({ queryKey: ['property-reviews'] })
+    },
+    onError: (e) => setError(errMessage(e)),
+  })
+
+  if (done) return <p className="text-xs text-green-700">Ulasan terkirim. Terima kasih!</p>
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="rounded-md bg-purple-600 px-3 py-1.5 text-sm text-white hover:bg-purple-700">
+        Beri Ulasan
+      </button>
+    )
+  }
+  return (
+    <div className="w-full space-y-2 rounded-lg border bg-slate-50 p-3">
+      {error && <p className="rounded-md bg-red-50 p-2 text-xs text-red-700">{error}</p>}
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            onClick={() => setRating(n)}
+            className={`text-xl leading-none ${n <= rating ? 'text-amber-400' : 'text-slate-300'}`}
+            aria-label={`${n} bintang`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        rows={2}
+        placeholder="Bagaimana pengalamanmu? (opsional)"
+        className="w-full rounded-md border px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+      />
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setOpen(false)} className="rounded-md border px-3 py-1.5 text-sm">Batal</button>
+        <button onClick={() => create.mutate()} disabled={create.isPending}
+          className="rounded-md bg-purple-600 px-3 py-1.5 text-sm text-white hover:bg-purple-700 disabled:opacity-50">
+          Kirim
+        </button>
       </div>
     </div>
   )

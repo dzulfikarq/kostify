@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { NotificationBell } from '../pages/NotificationsPage'
 
 export function Layout() {
   const { user, logout } = useAuth()
@@ -18,14 +19,25 @@ export function Layout() {
           <nav className="flex items-center gap-4 text-sm">
             <Link to="/properties" className="hover:text-teal-700">Cari Kost</Link>
             {user?.role === 'tenant' && (
-              <Link to="/tenant/bookings" className="hover:text-teal-700">Booking Saya</Link>
+              <>
+                <Link to="/tenant/bookings" className="hover:text-teal-700">Booking Saya</Link>
+                <Link to="/tenant/wishlist" className="hover:text-teal-700">Wishlist</Link>
+              </>
             )}
             {user?.role === 'owner' && (
               <>
                 <Link to="/owner/properties" className="hover:text-teal-700">Kost Saya</Link>
                 <Link to="/owner/bookings" className="hover:text-teal-700">Booking Masuk</Link>
+                <Link to="/dashboard" className="hover:text-teal-700">Dashboard</Link>
               </>
             )}
+            {user?.role === 'super_admin' && (
+              <>
+                <Link to="/admin/verifications" className="hover:text-teal-700">Verifikasi</Link>
+                <Link to="/dashboard" className="hover:text-teal-700">Dashboard</Link>
+              </>
+            )}
+            {user && <NotificationBell />}
             {user?.role === 'super_admin' && (
               <Link to="/admin/verifications" className="hover:text-teal-700">Verifikasi</Link>
             )}

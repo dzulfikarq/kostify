@@ -85,7 +85,7 @@ export function OwnerBookingsPage() {
             b={b}
             role="owner"
             busy={act.isPending}
-            onAct={(a) => act.mutate({ id: b.id, action: a })}
+            onAct={(a: string) => act.mutate({ id: b.id, action: a })}
             onReject={reject}
             onConfirm={confirm}
           />

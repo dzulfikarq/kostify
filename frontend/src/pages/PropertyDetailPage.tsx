@@ -65,8 +65,71 @@ export function PropertyDetailPage() {
       </div>
 
       {user?.role === 'tenant' && (
-        <BookingModal rooms={p.rooms} />
+        <>
+          <BookingModal rooms={p.rooms} />
+          <WishlistButton propertyId={p.id} />
+        </>
       )}
+
+      <h2 className="mt-10 mb-3 text-xl font-bold">Ulasan ({p.reviews_summary.count})</h2>
+      <ReviewList propertyId={p.id} />
+    </div>
+  )
+}
+
+function WishlistButton({ propertyId }: { propertyId: string }) {
+  const [added, setAdded] = useState(false)
+  const [error, setError] = useState('')
+  const add = useMutation({
+    mutationFn: async () =>
+      added
+        ? await api.delete(`/wishlist/${propertyId}`)
+        : await api.post('/wishlist', { property_id: propertyId }),
+    onSuccess: () => setAdded(!added),
+    onError: (e) => setError(errMessage(e)),
+  })
+  return (
+    <div className="fixed right-6 bottom-6 z-40 flex flex-col items-end gap-2">
+      {error && <p className="rounded-md bg-red-50 p-2 text-xs text-red-700">{error}</p>}
+      <button
+        onClick={() => add.mutate()}
+        disabled={add.isPending}
+        title={added ? 'Hapus dari wishlist' : 'Tambah ke wishlist'}
+        className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl shadow-lg transition ${
+          added ? 'bg-red-100 text-red-600' : 'bg-white text-slate-400 hover:text-red-500'
+        }`}
+      >
+        {added ? '♥' : '♡'}
+      </button>
+    </div>
+  )
+}
+
+function ReviewList({ propertyId }: { propertyId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['property-reviews', propertyId],
+    queryFn: async () =>
+      (
+        await api.get(`/properties/${propertyId}/reviews`)
+      ).data as {
+        data: { id: string; rating: number; comment: string | null; tenant_name: string; created_at: string }[]
+      },
+  })
+  if (isLoading) return <p className="text-slate-500">Memuat ulasan…</p>
+  if (!data || data.data.length === 0)
+    return <p className="text-sm text-slate-500">Belum ada ulasan.</p>
+  return (
+    <div className="space-y-3">
+      {data.data.map((r) => (
+        <div key={r.id} className="rounded-xl border bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">{r.tenant_name}</p>
+            <span className="text-amber-400">{'★'.repeat(r.rating)}<span className="text-slate-300">{'★'.repeat(5 - r.rating)}</span></span>
+          </div>
+          {r.comment && <p className="mt-1 text-sm text-slate-600">{r.comment}</p>}
+          <p className="mt-1 text-xs text-slate-400">{new Date(r.created_at).toLocaleDateString('id-ID')}</p>
+        </div>
+      ))}
     </div>
   )
 }

@@ -13,6 +13,10 @@ import { PropertyFormPage } from './pages/owner/PropertyFormPage'
 import { VerificationQueuePage } from './pages/admin/VerificationQueuePage'
 import { TenantBookingsPage } from './pages/booking/TenantBookingsPage'
 import { OwnerBookingsPage } from './pages/booking/OwnerBookingsPage'
+import { TenantWishlistPage } from './pages/TenantWishlistPage'
+
+import { NotificationsPage } from './pages/NotificationsPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -72,6 +76,30 @@ export default function App() {
                   </RequireAuth>
                 }
               />
+              <Route
+                path="/tenant/wishlist"
+                element={
+                  <RequireAuth roles={['tenant']}>
+                    <TenantWishlistPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <RequireAuth>
+                    <NotificationsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireAuth>
+                    <DashboardPage />
+                  </RequireAuth>
+                }
+              />
 
               <Route
                 path="/admin/verifications"
@@ -82,7 +110,7 @@ export default function App() {
                 }
               />
 
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/dashboard-redirect" element={<Navigate to="/" replace />} />
               <Route
                 path="*"
                 element={
