@@ -71,12 +71,20 @@ services:
       AUTO_MIGRATE: "true"
       MIGRATIONS_DIR: /app/migrations
       BCRYPT_COST: "12"
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: kostify
+      MINIO_SECRET_KEY: kostify123
+      MINIO_BUCKET: kostify
+      MINIO_SECURE: "false"
+      MINIO_PUBLIC_URL: http://localhost:9000
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
 volumes:

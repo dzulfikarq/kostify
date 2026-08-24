@@ -20,16 +20,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client) http.Handler {
+func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, storage domain.ObjectStorage) http.Handler {
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	userRepo := infrapostgres.NewUserRepo(db)
+	propertyRepo := infrapostgres.NewPropertyRepo(db)
+	roomRepo := infrapostgres.NewRoomRepo(db)
 	tokenStore := infraredis.NewTokenStore(rdb, cfg.RefreshTokenTTL)
 	signer := jwt.NewSigner([]byte(cfg.JWTSecret))
+
 	authUC := application.NewAuthUsecase(userRepo, tokenStore, signer, cfg.AccessTokenTTL, cfg.BcryptCost)
+	propertyUC := application.NewPropertyUsecase(propertyRepo, roomRepo, storage)
+	roomUC := application.NewRoomUsecase(roomRepo, propertyRepo)
+
 	authH := handler.NewAuthHandler(authUC, cfg)
+	propertyH := handler.NewPropertyHandler(propertyUC)
+	roomH := handler.NewRoomHandler(roomUC)
 
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
@@ -79,6 +87,35 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client) http.Handle
 			dto.OK(c, http.StatusOK, gin.H{"pong": true}, "Success")
 		},
 	)
+
+	propsPublic := v1.Group("/properties")
+	{
+		propsPublic.GET("", propertyH.ListPublic)
+		propsPublic.GET("/:id", middleware.OptionalAuth(signer), propertyH.GetDetail)
+		propsPublic.GET("/:id/rooms", middleware.OptionalAuth(signer), roomH.List)
+	}
+
+	owner := v1.Group("", middleware.Auth(signer), middleware.RequireRole(domain.RoleOwner))
+	{
+		owner.GET("/properties/owner", propertyH.ListMine)
+		owner.POST("/properties", propertyH.Create)
+		owner.PUT("/properties/:id", propertyH.Update)
+		owner.POST("/properties/:id/photos", propertyH.UploadPhoto)
+		owner.DELETE("/properties/:id/photos/:photoId", propertyH.DeletePhoto)
+		owner.POST("/properties/:id/submit", propertyH.Submit)
+
+		owner.POST("/properties/:id/rooms", roomH.Create)
+		owner.PUT("/rooms/:id", roomH.Update)
+		owner.DELETE("/rooms/:id", roomH.Delete)
+		owner.PATCH("/rooms/:id/status", roomH.UpdateStatus)
+	}
+
+	admin := v1.Group("", middleware.Auth(signer), middleware.RequireRole(domain.RoleSuperAdmin))
+	{
+		admin.POST("/properties/:id/approve", propertyH.Approve)
+		admin.POST("/properties/:id/reject", propertyH.Reject)
+		admin.DELETE("/properties/:id", propertyH.AdminDelete)
+	}
 
 	return r
 }

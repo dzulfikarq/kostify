@@ -45,3 +45,18 @@ func RequireRole(allowed ...domain.Role) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func OptionalAuth(signer *jwt.Signer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, err := c.Cookie("access_token")
+		if err != nil || token == "" {
+			c.Next()
+			return
+		}
+		if claims, err := signer.Parse(token); err == nil {
+			c.Set(ContextUserID, claims.Subject)
+			c.Set(ContextRole, claims.Role)
+		}
+		c.Next()
+	}
+}

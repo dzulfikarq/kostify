@@ -11,11 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dzulfikarq/kostify/backend/internal/config"
+	"github.com/dzulfikarq/kostify/backend/internal/domain"
+	inframinio "github.com/dzulfikarq/kostify/backend/internal/infrastructure/minio"
 	infrapostgres "github.com/dzulfikarq/kostify/backend/internal/infrastructure/postgres"
 	infraredis "github.com/dzulfikarq/kostify/backend/internal/infrastructure/redis"
 	httpapi "github.com/dzulfikarq/kostify/backend/internal/interfaces/http"
-
-	"github.com/dzulfikarq/kostify/backend/internal/config"
 )
 
 func main() {
@@ -56,9 +57,38 @@ func main() {
 		os.Exit(1)
 	}
 
+	var storage domain.ObjectStorage
+	for attempt := 1; attempt <= 10; attempt++ {
+		uploader, err := inframinio.NewUploader(
+			cfg.MinIOEndpoint,
+			cfg.MinIOAccessKey,
+			cfg.MinIOSecretKey,
+			cfg.MinioBucket,
+			cfg.MinioSecure,
+			cfg.MinioPublicURL,
+		)
+		if err == nil {
+			err = uploader.EnsureBucket(ctx)
+			if err == nil {
+				storage = uploader
+				break
+			}
+		}
+		slog.Warn("minio belum siap", "attempt", attempt, "err", err.Error())
+		select {
+		case <-ctx.Done():
+			os.Exit(1)
+		case <-time.After(2 * time.Second):
+		}
+	}
+	if storage == nil {
+		slog.Error("gagal konek minio")
+		os.Exit(1)
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           httpapi.NewRouter(cfg, db, rdb),
+		Handler:           httpapi.NewRouter(cfg, db, rdb, storage),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

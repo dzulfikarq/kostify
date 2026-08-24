@@ -26,6 +26,12 @@ type Config struct {
 	AutoMigrate     bool
 	MigrationsDir   string
 	BcryptCost      int
+	MinIOEndpoint   string
+	MinIOAccessKey  string
+	MinIOSecretKey  string
+	MinioBucket     string
+	MinioSecure     bool
+	MinioPublicURL  string
 }
 
 func Load() (*Config, error) {
@@ -47,12 +53,21 @@ func Load() (*Config, error) {
 		AutoMigrate:     envBool("AUTO_MIGRATE", false),
 		MigrationsDir:   env("MIGRATIONS_DIR", "migrations"),
 		BcryptCost:      envInt("BCRYPT_COST", 12),
+		MinIOEndpoint:   os.Getenv("MINIO_ENDPOINT"),
+		MinIOAccessKey:  os.Getenv("MINIO_ACCESS_KEY"),
+		MinIOSecretKey:  os.Getenv("MINIO_SECRET_KEY"),
+		MinioBucket:     os.Getenv("MINIO_BUCKET"),
+		MinioSecure:     envBool("MINIO_SECURE", false),
+		MinioPublicURL:  os.Getenv("MINIO_PUBLIC_URL"),
 	}
 	if cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET wajib diisi")
 	}
 	if len(cfg.JWTSecret) < 32 {
 		return nil, fmt.Errorf("JWT_SECRET minimal 32 karakter")
+	}
+	if cfg.MinIOEndpoint == "" || cfg.MinioBucket == "" {
+		return nil, fmt.Errorf("MINIO_ENDPOINT dan MINIO_BUCKET wajib diisi")
 	}
 	return cfg, nil
 }
