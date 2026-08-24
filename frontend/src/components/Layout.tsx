@@ -17,8 +17,14 @@ export function Layout() {
           <Link to="/" className="text-xl font-bold text-teal-700">Kostify</Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link to="/properties" className="hover:text-teal-700">Cari Kost</Link>
+            {user?.role === 'tenant' && (
+              <Link to="/tenant/bookings" className="hover:text-teal-700">Booking Saya</Link>
+            )}
             {user?.role === 'owner' && (
-              <Link to="/owner/properties" className="hover:text-teal-700">Kost Saya</Link>
+              <>
+                <Link to="/owner/properties" className="hover:text-teal-700">Kost Saya</Link>
+                <Link to="/owner/bookings" className="hover:text-teal-700">Booking Masuk</Link>
+              </>
             )}
             {user?.role === 'super_admin' && (
               <Link to="/admin/verifications" className="hover:text-teal-700">Verifikasi</Link>

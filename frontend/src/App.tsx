@@ -11,6 +11,8 @@ import { RegisterPage } from './pages/RegisterPage'
 import { OwnerPropertiesPage } from './pages/owner/OwnerPropertiesPage'
 import { PropertyFormPage } from './pages/owner/PropertyFormPage'
 import { VerificationQueuePage } from './pages/admin/VerificationQueuePage'
+import { TenantBookingsPage } from './pages/booking/TenantBookingsPage'
+import { OwnerBookingsPage } from './pages/booking/OwnerBookingsPage'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -50,6 +52,23 @@ export default function App() {
                 element={
                   <RequireAuth roles={['owner']}>
                     <PropertyFormPage />
+                  </RequireAuth>
+                }
+              />
+
+              <Route
+                path="/owner/bookings"
+                element={
+                  <RequireAuth roles={['owner']}>
+                    <OwnerBookingsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/tenant/bookings"
+                element={
+                  <RequireAuth roles={['tenant']}>
+                    <TenantBookingsPage />
                   </RequireAuth>
                 }
               />

@@ -86,6 +86,27 @@ export interface ApiMeta {
   total_pages: number
 }
 
+export interface BookingWithRefs {
+  id: string
+  room_id: string
+  property_id: string
+  property_name: string
+  room_number: string
+  tenant_id: string
+  owner_id: string
+  status: import('./types').BookingStatusAlias
+  price_per_month: number
+  lease_duration_months: number
+  start_date: string | null
+  expires_at: string
+  checked_in_at: string | null
+  checked_out_at: string | null
+  cancel_reason: string | null
+  created_at: string
+}
+
+export type BookingStatusAlias = 'pending' | 'survey' | 'booked' | 'active' | 'completed' | 'cancelled' | 'rejected' | 'expired'
+
 export class ValidationError extends Error {
   details: { field: string; message: string }[]
   constructor(details: { field: string; message: string }[]) {
