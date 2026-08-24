@@ -67,7 +67,7 @@ services:
       REFRESH_TOKEN_TTL: 168h
       COOKIE_SECURE: "false"
       COOKIE_DOMAIN: ""
-      FRONTEND_ORIGIN: http://localhost:5173
+      FRONTEND_ORIGIN: http://localhost:5173,http://localhost:3000
       AUTO_MIGRATE: "true"
       MIGRATIONS_DIR: /app/migrations
       BCRYPT_COST: "12"
@@ -89,6 +89,13 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+
+  web:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
 
 volumes:
   pgdata:
