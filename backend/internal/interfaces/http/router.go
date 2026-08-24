@@ -40,11 +40,19 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, storage dom
 	mailer := mailerpkg.New(cfg.SMTPHost, cfg.SMTPPort, cfg.MailFrom)
 	bookingUC := application.NewBookingUsecase(bookingRepo, notificationRepo, userRepo, mailer)
 
+	reviewRepo := infrapostgres.NewReviewRepo(db)
+	wishlistRepo := infrapostgres.NewWishlistRepo(db)
+	dashboardRepo := infrapostgres.NewDashboardRepo(db)
+	reviewUC := application.NewReviewUsecase(reviewRepo, bookingRepo)
+	wishlistUC := application.NewWishlistUsecase(wishlistRepo, propertyRepo)
+	dashboardUC := application.NewDashboardUsecase(dashboardRepo)
+
 	authH := handler.NewAuthHandler(authUC, cfg)
 	propertyH := handler.NewPropertyHandler(propertyUC)
 	roomH := handler.NewRoomHandler(roomUC)
 	bookingH := handler.NewBookingHandler(bookingUC)
 	notifikasiH := handler.NewNotificationHandler(notificationRepo)
+	reviewH := handler.NewReviewHandler(reviewUC, wishlistUC, dashboardUC)
 
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
@@ -100,6 +108,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, storage dom
 		propsPublic.GET("", propertyH.ListPublic)
 		propsPublic.GET("/:id", middleware.OptionalAuth(signer), propertyH.GetDetail)
 		propsPublic.GET("/:id/rooms", middleware.OptionalAuth(signer), roomH.List)
+		propsPublic.GET("/:id/reviews", reviewH.ListByProperty)
 	}
 
 	owner := v1.Group("", middleware.Auth(signer), middleware.RequireRole(domain.RoleOwner))
@@ -131,7 +140,14 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, storage dom
 		tenant.PUT("/bookings/:id/checkin", bookingH.CheckIn)
 		tenant.PUT("/bookings/:id/checkout", bookingH.CheckOut)
 		tenant.PUT("/bookings/:id/cancel", bookingH.Cancel)
+		tenant.POST("/bookings/:id/reviews", reviewH.Create)
+
+		tenant.GET("/wishlist", reviewH.WishlistList)
+		tenant.POST("/wishlist", reviewH.WishlistAdd)
+		tenant.DELETE("/wishlist/:propertyId", reviewH.WishlistRemove)
 	}
+
+	v1.GET("/dashboard", middleware.Auth(signer), reviewH.Dashboard)
 
 	bookingOwner := v1.Group("", middleware.Auth(signer), middleware.RequireRole(domain.RoleOwner))
 	{

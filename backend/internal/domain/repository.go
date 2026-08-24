@@ -118,3 +118,22 @@ type NotificationRepository interface {
 	MarkRead(ctx context.Context, id, userID string) (bool, error)
 	MarkAllRead(ctx context.Context, userID string) (int64, error)
 }
+
+type ReviewRepository interface {
+	CreateWithRecompute(ctx context.Context, r *Review) error
+	FindByBooking(ctx context.Context, bookingID string) (*Review, error)
+	ListByProperty(ctx context.Context, propertyID string, f ListParams) ([]ReviewWithTenant, int64, error)
+}
+
+type WishlistRepository interface {
+	Add(ctx context.Context, userID, propertyID string) error
+	Remove(ctx context.Context, userID, propertyID string) error
+	List(ctx context.Context, userID string, f ListParams) ([]PropertyWithStats, int64, error)
+	CountByUser(ctx context.Context, userID string) (int64, error)
+}
+
+type DashboardRepository interface {
+	OwnerStats(ctx context.Context, ownerID string) (map[string]any, error)
+	TenantStats(ctx context.Context, tenantID string) (map[string]any, error)
+	AdminStats(ctx context.Context) (map[string]any, error)
+}
